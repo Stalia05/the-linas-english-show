@@ -1,0 +1,40 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lina's Teacher Dashboard</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:linear-gradient(135deg,#16002d,#52005d,#00265c);color:white;min-height:100vh}
+.wrap{max-width:1000px;margin:auto;padding:24px}h1{color:#ffe600;text-shadow:3px 3px #ff009d;font-size:40px}.card{background:#150025eF;border:3px solid #00e5ff;border-radius:20px;padding:22px;margin:18px 0}.answer{background:white;color:#1b0030;border-radius:12px;padding:14px;margin:10px 0 18px;white-space:pre-wrap}.correction{width:100%;min-height:80px;border:3px solid #ff009d;border-radius:12px;padding:12px;font-size:16px}.comment{width:100%;min-height:70px;border:3px solid #00e5ff;border-radius:12px;padding:12px;font-size:16px}button{border:0;border-radius:12px;padding:13px 18px;font-weight:bold;font-size:16px;cursor:pointer;background:#ffe600;color:#19002e;margin:6px;box-shadow:3px 3px #ff009d}.green{background:#70ffb1}.small{color:#ccc}.top{display:flex;justify-content:space-between;gap:10px;align-items:center}.pill{background:#ff009d;padding:7px 12px;border-radius:20px;font-weight:bold}select{padding:10px;border-radius:10px;font-size:16px}.empty{text-align:center;padding:40px}.print-title{display:none}
+@media print{body{background:white;color:black}.wrap{max-width:none}.top button,#refresh,.no-print{display:none!important}.card{border:1px solid #aaa;background:white;color:black;break-inside:avoid}.answer{border:1px solid #bbb}.correction,.comment{border:1px solid #bbb}.print-title{display:block}h1{color:black;text-shadow:none}}
+</style></head><body><div class="wrap">
+<div class="top"><div><h1>🎤 LINA'S TEACHER DASHBOARD</h1><div class="small">Copies reçues → correction → PDF</div></div><button id="refresh" onclick="loadCopies()">↻ ACTUALISER</button></div>
+<div id="status" class="card">Chargement des copies…</div><div id="app"></div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const URL="https://vdgwhnjdnxxcslqhionv.supabase.co", KEY="sb_publishable_-XCxyf7SZJNivwp3EEfoIw_bS4nJ0kl";
+const db=window.supabase.createClient(URL,KEY);
+const labels={name:"Celebrity name",job:"Job / talent",country:"Country",why:"Why are you famous?",fans:"Fans' name",signature:"Signature thing",intro:"Celebrity introduction",achievement:"Biggest achievement",funny:"Funny fact",q1:"What is it like to be famous?",q2:"How did you become famous?",q3:"What do you do when fans recognize you?",pap:"Paparazzi Alert",holiday1:"Last holiday — Where?",holiday2:"Last holiday — Who with?",holiday3:"Last holiday — What did you do/eat?",food:"Favourite food and why?",gp1:"Grammar Police 1",gp2:"Grammar Police 2",gp3:"Grammar Police 3",gp4:"Grammar Police 4",dream:"What is your dream?",free:"Free time",weekend:"Last weekend",now:"What are you doing these days?",wr1:"Famous or rich?",wr2:"Travel world or dream city?",speech:"Final speech",catchphrase:"Celebrity catchphrase"};
+let copies=[], current=null, edits={};
+async function loadCopies(){
+ document.getElementById("status").innerHTML="Chargement…";
+ const {data,error}=await db.from("submissions").select("*").order("submitted_at",{ascending:false});
+ if(error){document.getElementById("status").innerHTML="❌ Accès professeur pas encore autorisé dans Supabase.<br><br>Retourne dans le SQL Editor et ajoute la règle SELECT que Rex te donne.";return}
+ copies=data||[]; document.getElementById("status").style.display="none";
+ if(!copies.length){document.getElementById("app").innerHTML='<div class="card empty">Aucune copie reçue.</div>';return}
+ current=current||copies[0].id; render();
+}
+function render(){
+ const c=copies.find(x=>x.id===current)||copies[0]; current=c.id; edits[c.id]=edits[c.id]||{corr:c.corrections||{},comment:c.teacher_comment||""};
+ let opts=copies.map(x=>`<option value="${x.id}" ${x.id===c.id?"selected":""}>${esc(x.student_name)} — ${new Date(x.submitted_at).toLocaleString("fr-FR")}</option>`).join("");
+ let body=`<div class="card no-print"><b>Choisir une copie :</b> <select onchange="current=this.value;render()">${opts}</select></div>
+ <div class="card"><span class="pill">${esc(c.status)}</span><h2>${esc(c.student_name)} — ${esc(c.session_name||"Session")}</h2><div class="small">Envoyé le ${new Date(c.submitted_at).toLocaleString("fr-FR")}</div></div>`;
+ Object.entries(c.answers||{}).forEach(([k,v])=>{if(!v)return;let e=edits[c.id].corr[k]||{};body+=`<div class="card"><h3>${esc(labels[k]||k)}</h3><div class="small">Réponse de l'élève</div><div class="answer">${esc(String(v))}</div><b>✏️ Ta correction</b><textarea class="correction" oninput="setCorr('${safe(k)}','text',this.value)">${esc(e.text||"")}</textarea><b>💬 Commentaire</b><textarea class="comment" oninput="setCorr('${safe(k)}','comment',this.value)">${esc(e.comment||"")}</textarea></div>`});
+ body+=`<div class="card"><h2>🧠 Grammar Quiz</h2>${quizText(c.quiz_answers)}</div>
+ <div class="card"><h2>🏆 Lina's Feedback</h2><textarea class="comment" style="min-height:130px" oninput="edits[current].comment=this.value">${esc(edits[c.id].comment)}</textarea><div class="no-print"><br><button class="green" onclick="saveCorrection()">💾 SAUVEGARDER</button><button onclick="window.print()">📄 ENREGISTRER EN PDF</button></div></div>`;
+ document.getElementById("app").innerHTML=body;
+}
+function quizText(q){let a=Object.entries(q||{});return a.length?a.map(([k,v])=>`<div class="answer"><b>${esc(k)}</b> → choix ${Number(v)+1}</div>`).join(""):'<div class="answer">Aucune réponse QCM</div>'}
+function setCorr(k,t,v){edits[current].corr[k]=edits[current].corr[k]||{};edits[current].corr[k][t]=v}
+async function saveCorrection(){let e=edits[current];let {error}=await db.from("submissions").update({corrections:e.corr,teacher_comment:e.comment,status:"corrected"}).eq("id",current);alert(error?"Erreur : "+error.message:"✅ Correction sauvegardée !");if(!error)loadCopies()}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function safe(s){return String(s).replace(/'/g,"")}
+loadCopies();
+</script></body></html>
