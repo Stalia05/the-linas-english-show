@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>The Lina's English Show</title>
+<style>
+*{box-sizing:border-box} body{margin:0;font-family:Arial,sans-serif;background:#16002d;color:#fff;min-height:100vh}
+body:before{content:"";position:fixed;inset:0;background:linear-gradient(135deg,#27005b,#5b005f 45%,#001d55);z-index:-2}
+body:after{content:"";position:fixed;inset:0;background-image:linear-gradient(90deg,transparent 95%,rgba(255,255,255,.04) 95%),linear-gradient(0deg,transparent 95%,rgba(255,255,255,.04) 95%);background-size:32px 32px;z-index:-1}
+.app{max-width:900px;margin:auto;padding:22px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}
+.logo{font-weight:900;font-size:clamp(24px,5vw,46px);text-shadow:4px 4px #ff009d,-2px -2px #00e5ff}.score{background:#000;border:3px solid #ffe600;padding:10px 16px;border-radius:12px;font-weight:bold}
+.card{background:rgba(10,0,25,.88);border:3px solid #00e5ff;border-radius:22px;padding:28px;box-shadow:0 0 25px rgba(0,229,255,.25)}
+h1,h2{margin-top:0} h1{font-size:clamp(30px,6vw,54px);color:#ffe600}.sub{color:#8ffcff;font-weight:bold}.small{color:#ccc;font-size:14px}
+button{border:0;border-radius:12px;padding:13px 18px;font-weight:900;cursor:pointer;font-size:16px;background:#ffe600;color:#16002d;box-shadow:4px 4px #ff009d}
+button:hover{transform:translateY(-2px)} .secondary{background:#00e5ff;box-shadow:4px 4px #ff009d}
+.nav{display:flex;justify-content:space-between;gap:10px;margin-top:22px}
+input,textarea{width:100%;background:#fff;color:#16002d;border:3px solid #00e5ff;border-radius:12px;padding:13px;font-size:17px}
+textarea{min-height:110px;resize:vertical}.field{margin:16px 0}.field label{display:block;font-weight:900;margin-bottom:7px;color:#ffe600}
+.choice{display:block;background:#28034d;border:2px solid #8f52c7;padding:14px;margin:10px 0;border-radius:12px;cursor:pointer}.choice:hover{border-color:#00e5ff}
+.choice input{width:auto;margin-right:10px}.tag{display:inline-block;background:#ff009d;padding:6px 10px;border-radius:20px;font-weight:bold;margin-bottom:12px}
+.progress{height:9px;background:#35154d;border-radius:10px;overflow:hidden;margin-bottom:20px}.bar{height:100%;background:#ffe600;width:0}
+.center{text-align:center}.hidden{display:none}.danger{color:#ff8bd8}.ok{color:#7cffb2;font-weight:bold}
+.review{background:#fff;color:#16002d;padding:16px;border-radius:14px;margin:12px 0}.review b{color:#7b007b}.review em{color:#555}
+@media(max-width:600px){.app{padding:12px}.card{padding:20px}.top{align-items:flex-start}.logo{font-size:26px}.score{font-size:12px}}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="top"><div class="logo">THE LINA'S ENGLISH SHOW</div><div class="score" id="score">0 PTS</div></div>
+<div class="progress"><div class="bar" id="bar"></div></div>
+<div id="screen"></div>
+</div>
+<script>
+const questions=[
+["Present Simple","The celebrity ___ steak every Friday.",["eat","eats","eating","is eat"],1,"Habit + he/she/it → add -s."],
+["Present Simple","___ he like red meat?",["Do","Does","Is","Can"],1,"With he/she/it in a Present Simple question: DOES + base verb."],
+["Present Continuous","Look! The celebrity ___ a huge steak.",["eats","eat","is eating","eating"],2,"Look! + happening now → BE + ING."],
+["CAN","The celebrity ___ speak three languages.",["can","cans","is can","does can"],0,"CAN + base verb. No -s, no TO, no DO."],
+["Past Simple","Yesterday, the celebrity ___ to a famous restaurant.",["go","goes","went","going"],2,"Yesterday = finished past. go → went."],
+["Past Simple","Last summer, the celebrity ___ a huge steak.",["eat","eats","ate","eating"],2,"Past of eat = ate."],
+["Past Continuous","At 9 p.m., the celebrity ___ dinner.",["has","had","was having","is having"],2,"Past Continuous = WAS/WERE + ING."],
+["Question Words","___ did you go on holiday?",["Who","Where","Why","When"],1,"WHERE asks about a place."],
+["Future","Look at those clouds! It ___ rain.",["will","is going to","can","was"],1,"Present evidence → BE GOING TO."],
+["Future","I think the celebrity ___ be famous forever.",["is going to","will","is","does"],1,"Prediction/opinion with 'I think' → WILL."],
+["Possessives","This is ___ jacket. He bought it himself.",["he","him","his","he's"],2,"HIS shows possession."],
+["SOME / ANY","There isn't ___ food left!",["some","any","many","a"],1,"ANY is common in negative sentences."],
+["Comparatives","Pizza is ___ than salad.",["delicious","more delicious","most delicious","more delicious than"],1,"Long adjective → MORE + adjective + THAN."],
+["Question Words","___ did you meet at the restaurant?",["Where","When","Who","Why"],2,"WHO asks about a person."],
+["Present Simple","The celebrity ___ English every day.",["study","studys","studies","is study"],2,"study → studies with he/she/it."],
+["Present Continuous","Right now, the celebrity ___ for the fans.",["signs","signed","is signing","sign"],2,"RIGHT NOW → action happening now → BE + ING."]
+];
+let steps=[
+{type:"intro",title:"WELCOME, SUPERSTAR! ⭐",html:`<p class="sub">You have just become famous.</p><p>A TV channel has invited you to <b>The Lina's English Show</b> for your first international interview.</p><p>Your mission: <b>create your celebrity identity</b>, survive the grammar challenges and finish with a live interview.</p><p class="danger">There are no perfect answers. Try your best and use English!</p>`},
+{type:"identity",title:"CREATE YOUR CELEBRITY 🎤",html:`<p>Imagine you are a real celebrity. Complete your profile.</p>
+<div class="field"><label>Celebrity name</label><input id="name" placeholder="Example: Alex Star"></div>
+<div class="field"><label>What are you famous for? (job / talent)</label><input id="job" placeholder="Example: singer, gamer, actor..."></div>
+<div class="field"><label>Where are you from?</label><input id="country"></div>
+<div class="field"><label>Why are you famous?</label><textarea id="why"></textarea></div>
+<div class="field"><label>What are your fans called?</label><input id="fans"></div>
+<div class="field"><label>What is your signature thing?</label><textarea id="signature" placeholder="Something people always associate with you..."></textarea></div>`},
+{type:"story",title:"YOUR CELEBRITY STORY 🌟",html:`<p>Write a few sentences about your celebrity.</p>
+<div class="field"><label>Introduce yourself in 3 sentences.</label><textarea id="intro" placeholder="My name is... I am... I am famous because..."></textarea></div>
+<div class="field"><label>What is your biggest achievement?</label><textarea id="achievement"></textarea></div>
+<div class="field"><label>Tell us one strange or funny thing about you.</label><textarea id="funny"></textarea></div>`},
+{type:"interview",title:"LIVE INTERVIEW 🎙️",html:`<p class="sub">The cameras are on!</p>
+<div class="field"><label>1. What is it like to be famous?</label><textarea id="q1"></textarea></div>
+<div class="field"><label>2. How did you become famous?</label><textarea id="q2"></textarea></div>
+<div class="field"><label>3. What do you usually do when fans recognize you?</label><textarea id="q3"></textarea></div>`},
+{type:"paparazzi",title:"🚨 PAPARAZZI ALERT!",html:`<p>You are leaving a restaurant. Suddenly, photographers see you!</p>
+<div class="field"><label>What do you do? Write 2–4 sentences.</label><textarea id="pap"></textarea></div>
+<p class="small">Try to use: <b>usually / sometimes / can / present continuous</b>.</p>`},
+{type:"quiz",title:"GRAMMAR CHALLENGE 🧠",html:`<p>Choose the correct answer. One point for each correct answer!</p><div id="quiz"></div>`},
+{type:"tour",title:"🌍 INTERNATIONAL TOUR",html:`<p>You are travelling around the world.</p>
+<div class="field"><label>Where did you go on your last holiday?</label><textarea id="holiday1"></textarea></div>
+<div class="field"><label>Who did you go with?</label><textarea id="holiday2"></textarea></div>
+<div class="field"><label>What did you do / eat?</label><textarea id="holiday3"></textarea></div>`},
+{type:"fan",title:"📞 FAN CALL",html:`<p>A fan is calling the studio!</p>
+<div class="field"><label>What is your favourite food and why do you love it?</label><textarea id="food" placeholder="My favourite food is... because..."></textarea></div>`},
+{type:"grammarPolice",title:"👮 GRAMMAR POLICE",html:`<p>These sentences are WRONG. Correct them.</p>
+<div class="field"><label>1. She go to restaurants every Friday.</label><input id="gp1"></div>
+<div class="field"><label>2. Yesterday, I eat pizza.</label><input id="gp2"></div>
+<div class="field"><label>3. He can to sing very well.</label><input id="gp3"></div>
+<div class="field"><label>4. Look! They play football.</label><input id="gp4"></div>`},
+{type:"big",title:"THE BIG INTERVIEW ⭐",html:`<p>This is your final interview. Answer naturally.</p>
+<div class="field"><label>What is your dream?</label><textarea id="dream"></textarea></div>
+<div class="field"><label>What do you usually do in your free time?</label><textarea id="free"></textarea></div>
+<div class="field"><label>What did you do last weekend?</label><textarea id="weekend"></textarea></div>
+<div class="field"><label>What are you doing these days?</label><textarea id="now"></textarea></div>`},
+{type:"would",title:"WOULD YOU RATHER? 😈",html:`<p>Choose ONE and explain your choice in English.</p>
+<div class="field"><label>Would you rather be extremely famous or extremely rich?</label><textarea id="wr1"></textarea></div>
+<div class="field"><label>Would you rather travel the world or live in your dream city?</label><textarea id="wr2"></textarea></div>`},
+{type:"final",title:"🏆 FINAL SPEECH",html:`<p>You are live on TV. Give your final celebrity speech.</p><p class="small">Write 6–8 sentences. Try to use different tenses.</p>
+<div class="field"><textarea id="speech" style="min-height:220px" placeholder="Hello everyone! My name is..."></textarea></div>
+<div class="field"><label>Bonus: Your celebrity catchphrase 🎤</label><input id="catchphrase"></div>`}
+];
+let state={i:0,answers:{},points:0,quiz:{}};
+const KEY="lina_show_lywan_v1";
+function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+function load(){try{let x=JSON.parse(localStorage.getItem(KEY));if(x)state=x}catch(e){}}
+function val(id){let e=document.getElementById(id);return e?e.value:""}
+function collect(){
+document.querySelectorAll("input,textarea").forEach(e=>{if(e.id)state.answers[e.id]=e.value});
+document.querySelectorAll('input[type=radio]:checked').forEach(e=>state.quiz[e.name]=+e.value);
+save()
+}
+function render(){
+collect();let s=steps[state.i], html=`<div class="card"><span class="tag">MISSION ${state.i+1}/${steps.length}</span><h1>${s.title}</h1>${s.html}<div class="nav"><button class="secondary" onclick="back()">← BACK</button><button onclick="next()">${state.i===steps.length-1?"FINISH 🏆":"NEXT →"}</button></div></div>`;
+document.getElementById("screen").innerHTML=html;
+if(s.type==="quiz")buildQuiz();
+restore();updateUI()
+}
+function restore(){for(let [id,v] of Object.entries(state.answers)){let e=document.getElementById(id);if(e)e.value=v}
+for(let [n,v] of Object.entries(state.quiz)){let e=document.querySelector(`input[name="${n}"][value="${v}"]`);if(e)e.checked=true}}
+function buildQuiz(){
+let qhtml="";questions.forEach((q,i)=>{qhtml+=`<div class="review"><b>${i+1}. ${q[1]}</b>${q[2].map((o,j)=>`<label class="choice"><input type="radio" name="q${i}" value="${j}" ${state.quiz["q"+i]===j?"checked":""}> ${o}</label>`).join("")}</div>`});
+document.getElementById("quiz").innerHTML=qhtml;
+document.querySelectorAll('#quiz input').forEach(e=>e.addEventListener('change',()=>{state.quiz[e.name]=+e.value;save()}))
+}
+function updateUI(){document.getElementById("bar").style.width=((state.i)/(steps.length-1)*100)+"%";document.getElementById("score").textContent=state.points+" PTS"}
+function next(){
+collect();
+if(state.i===5){state.points=Object.values(state.quiz).reduce((n,v,i)=>n+(v===questions[i][4-1]?1:0),0)}
+if(state.i<steps.length-1){state.i++;render()}else finish()
+}
+function back(){collect();if(state.i>0){state.i--;render()}}
+function finish(){
+collect();let score=0;questions.forEach((q,i)=>{if(state.quiz["q"+i]===q[3])score++});state.points=score;save();
+let html=`<div class="card center"><span class="tag">SHOW COMPLETE</span><h1>🎉 YOU DID IT!</h1><p class="sub">Your answers are saved on this device.</p><h2>${score} / ${questions.length} grammar points</h2><p>Now send your answers to your teacher.</p><button onclick="downloadAnswers()">💾 SAVE MY ANSWERS</button><br><br><button class="secondary" onclick="renderReview()">👀 REVIEW MY ANSWERS</button><p class="small">The downloaded file contains your written answers and your quiz choices. Do not delete it until your teacher has received it.</p></div>`;
+document.getElementById("screen").innerHTML=html;updateUI()
+}
+function downloadAnswers(){
+collect();let lines=["THE LINA'S ENGLISH SHOW — LYWAN","DATE: "+new Date().toLocaleString("fr-FR"),"","=== ANSWERS ==="];
+for(let [k,v] of Object.entries(state.answers))lines.push(k+": "+v.replace(/\n/g," "));
+lines.push("","=== GRAMMAR QUIZ ===");
+questions.forEach((q,i)=>{let choice=state.quiz["q"+i];lines.push((i+1)+". "+q[1]+" | "+(choice!=null?q[2][choice]:"NO ANSWER"))});
+let blob=new Blob([lines.join("\n")],{type:"text/plain;charset=utf-8"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="Lina_English_Show_Lywan_Answers.txt";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)
+}
+function renderReview(){
+collect();let html=`<div class="card"><span class="tag">YOUR ANSWERS</span><h1>📋 REVIEW</h1>`;
+for(let [k,v] of Object.entries(state.answers)){if(v)html+=`<div class="review"><b>${k}</b><br>${escapeHtml(v).replace(/\n/g,"<br>")}</div>`}
+html+=`<button onclick="finish()">← BACK TO RESULTS</button></div>`;document.getElementById("screen").innerHTML=html}
+function escapeHtml(x){return x.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+load();render();
+</script>
+</body>
+</html>
